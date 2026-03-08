@@ -2,37 +2,40 @@
 session_start();
 include('db.php');
 
-// Security: Ensure only Admin can access this page
-if (!isset($_SESSION['username']) || $_SESSION['role'] != 'admin') {
+// Security: Only allow Admin access
+if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
     header("Location: ../index.php");
     exit();
 }
 
-if(isset($_POST['add_teacher'])) {
-    $name = $_POST['t_name'];
-    $raw_pass = $_POST['t_pass'];
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    $username = mysqli_real_escape_string($conn, $_POST['username']);
+    $password = mysqli_real_escape_string($conn, $_POST['password']);
+
+    // Insert into users table with the 'teacher' role
+    $sql = "INSERT INTO users (username, password, role) VALUES ('$username', '$password', 'teacher')";
     
-    // 1. Secure the password using modern hashing
-    $hashed_pass = password_hash($raw_pass, PASSWORD_DEFAULT);
-    
-    // 2. Use Prepared Statements to prevent SQL Injection
-    $stmt = $conn->prepare("INSERT INTO users (username, password, role) VALUES (?, ?, 'teacher')");
-    $stmt->bind_param("ss", $name, $hashed_pass);
-    
-    if($stmt->execute()) { 
-        echo "<script>alert('Teacher Registered Securely!');</script>"; 
+    if ($conn->query($sql) === TRUE) {
+        echo "<script>alert('Teacher added successfully!'); window.location='dashboard.php';</script>";
     } else {
-        echo "<script>alert('Error: Username might already exist');</script>";
+        echo "Error: " . $conn->error;
     }
-    $stmt->close();
 }
 ?>
 
-<h3>Register New Teacher (Secure)</h3>
-<form method="POST">
-    <input type="text" name="t_name" placeholder="Teacher Username" required><br><br>
-    <input type="password" name="t_pass" placeholder="Assign Secure Password" required><br><br>
-    <button type="submit" name="add_teacher">Register Teacher</button>
-</form>
-<hr>
-<a href="dashboard.php">Back to Dashboard</a>
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Add Teacher</title>
+</head>
+<body>
+    <h2>Add New Teacher</h2>
+    <form method="POST">
+        <input type="text" name="username" placeholder="Teacher Name/Username" required><br><br>
+        <input type="text" name="password" placeholder="Set Password" required><br><br>
+        <button type="submit">Add Teacher</button>
+    </form>
+    <br>
+    <a href="dashboard.php">Back to Dashboard</a>
+</body>
+</html>

@@ -1,31 +1,28 @@
 <?php
 session_start();
-include('admin/db.php'); // Make sure this path points to your connection file
+include('admin/db.php');
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $user = $_POST['username'];
-    $pass = $_POST['password'];
-    $role = $_POST['role'];
+    // Basic sanitization to prevent breaking the SQL string
+    $user = mysqli_real_escape_string($conn, $_POST['username']);
+    $pass = mysqli_real_escape_string($conn, $_POST['password']);
+    $role = mysqli_real_escape_string($conn, $_POST['role']);
 
-    // Query to check username, password, and the selected role
-    $sql = "SELECT * FROM users WHERE username='$user' AND password='$pass' AND role='$role'";
-    $result = $conn->query($sql);
+    // This is the specific line that was failing; rewritten for maximum compatibility
+    $query = "SELECT * FROM users WHERE username = '$user' AND password = '$pass' AND role = '$role' LIMIT 1";
+    $result = $conn->query($query);
 
-    if ($result->num_rows > 0) {
+    if ($result && $result->num_rows > 0) {
         $row = $result->fetch_assoc();
+        
+        $_SESSION['user_id'] = $row['id'];
         $_SESSION['username'] = $row['username'];
         $_SESSION['role'] = $row['role'];
 
-        // Redirect based on role
-        if ($role == 'admin') {
-            header("Location: admin/dashboard.php");
-        } elseif ($role == 'teacher') {
-            header("Location: teacher/dashboard.php");
-        } elseif ($role == 'student') {
-            header("Location: student/dashboard.php");
-        }
+        header("Location: " . $row['role'] . "/dashboard.php");
+        exit();
     } else {
-        echo "<script>alert('Invalid Credentials or Role'); window.location='index.php';</script>";
+        echo "<script>alert('Login Failed: Check Username/Password/Role'); window.location='index.php';</script>";
     }
 }
 ?>
